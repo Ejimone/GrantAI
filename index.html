@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Chatbot</title>
+  </head>
+  <body>
+    <h1>Audio Chatbot</h1>
+    <button id="start-record-btn">Start Recording</button>
+    <button id="stop-record-btn" disabled>Stop Recording</button>
+    <p id="response"></p>
+
+    <script>
+      const startRecordBtn = document.getElementById("start-record-btn");
+      const stopRecordBtn = document.getElementById("stop-record-btn");
+      const responseParagraph = document.getElementById("response");
+
+      let mediaRecorder;
+      let audioChunks = [];
+
+      startRecordBtn.addEventListener("click", async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+
+        mediaRecorder.addEventListener("dataavailable", (event) => {
+          audioChunks.push(event.data);
+        });
+
+        mediaRecorder.addEventListener("stop", async () => {
+          const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "audio.wav");
+
+          const response = await fetch("http://127.0.0.1:5000/process_audio", {
+            // Ensure the correct URL
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+          responseParagraph.textContent = data.response;
+        });
+
+        startRecordBtn.disabled = true;
+        stopRecordBtn.disabled = false;
+      });
+
+      stopRecordBtn.addEventListener("click", () => {
+        mediaRecorder.stop();
+        startRecordBtn.disabled = false;
+        stopRecordBtn.disabled = true;
+      });
+    </script>
+  </body>
+</html>
